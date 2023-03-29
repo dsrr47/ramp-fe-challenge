@@ -1,5 +1,5 @@
 import Downshift from "downshift"
-import { useCallback, useState } from "react"
+import { useCallback, useState, useRef, useLayoutEffect } from "react"
 import classNames from "classnames"
 import { DropdownPosition, GetDropdownPositionFn, InputSelectOnChange, InputSelectProps } from "./types"
 
@@ -18,12 +18,27 @@ export function InputSelect<TItem>({
     left: 0,
   })
 
+  const inputRef = useRef<HTMLInputElement>(null)
+  useLayoutEffect(() => {
+    const calculatePosition = () => {
+      if (inputRef.current) {
+        const { top, left } = inputRef.current.getBoundingClientRect()
+        setDropdownPosition(() => ({ top: 63 + top, left }))
+      }
+    }
+
+    window.addEventListener("scroll", calculatePosition)
+
+    return () => {
+      window.removeEventListener("scroll", calculatePosition)
+    }
+  }, [dropdownPosition])
+
   const onChange = useCallback<InputSelectOnChange<TItem>>(
     (selectedItem) => {
       if (selectedItem === null) {
         return
       }
-
       consumerOnChange(selectedItem)
       setSelectedValue(selectedItem)
     },
@@ -58,6 +73,7 @@ export function InputSelect<TItem>({
             <div className="RampBreak--xs" />
             <div
               className="RampInputSelect--input"
+              ref={inputRef}
               onClick={(event) => {
                 setDropdownPosition(getDropdownPosition(event.target))
                 toggleProps.onClick(event)
@@ -120,9 +136,8 @@ export function InputSelect<TItem>({
 const getDropdownPosition: GetDropdownPositionFn = (target) => {
   if (target instanceof Element) {
     const { top, left } = target.getBoundingClientRect()
-    const { scrollY } = window
     return {
-      top: scrollY + top + 63,
+      top: top + 63,
       left,
     }
   }
